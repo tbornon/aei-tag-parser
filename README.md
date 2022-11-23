@@ -52,7 +52,7 @@ $ cat tags.txt | aei-tag-parser
 
 ## Librairie
 
-This project can also be used as an external library. Documentation is available here : [https://docs.rs/aei_tag_parser/1.0.0/aei_tag_parser/index.html](https://docs.rs/aei_tag_parser/1.0.0/aei_tag_parser/index.html)
+This project can also be used as an external library. Documentation is available here : [https://docs.rs/aei_tag_parser/latest/aei_tag_parser/](https://docs.rs/aei_tag_parser/latest/aei_tag_parser/)
 
 ### Usage
 

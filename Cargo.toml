@@ -1,9 +1,10 @@
 [package]
 name = "aei_tag_parser"
-version = "1.0.1"
+version = "1.0.2"
 edition = "2021"
 repository = "https://github.com/tbornon/aei-tag-parser"
 homepage = "https://github.com/tbornon/aei-tag-parser"
+documentation = "https://docs.rs/aei_tag_parser/latest/aei_tag_parser"
 description = "A simple tool and library to parse AEI RFID tags"
 license = "MIT"
 
