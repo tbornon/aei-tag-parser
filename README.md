@@ -1,52 +1,73 @@
 # AEI TAG PARSER
 
-Ce programme a été écrit pour déserializer le contenu des tags RFID ferroviaires. Il peut être utilisé à la fois en ligne de commande et en tant que librairie externe.
+This library provides a way to deserialize RFID AEI tags used in railway industry to identify wagons. It can be used both a CLI util or a library
 
-# Utilisation 
+# Usage 
 
 ## CLI
 
-Désérialisation de tags passés en paramètres :
+Deserialize one or multiple tags passed as parameters :
 ```bash 
-# Un seul tag
-$ ./aei-tag-parser 9EA488C030426A179000000000000331
-# Ou plusieurs tags
-$ ./aei-tag-parser 2F3E06C007DB1E139000000000000331 9EA488C030426A179000000000000331 9EA488C5320CC01B9000000000000331
+# One tag :
+$ aei-tag-parser 9EA488C030426A179000000000000331
+# Output : 
+# 9EA488C030426A179000000000000331 : Initials : IOCC      Car number : 3088
+# Multiple tags :
+$ aei-tag-parser 2F3E06C007DB1E139000000000000331 9EA488C030426A179000000000000331 9EA488C5320CC01B9000000000000331
+# Output : 
+# 2F3E06C007DB1E139000000000000331 : Initials : QNSL      Car number : 502
+# 9EA488C030426A179000000000000331 : Initials : IOCC      Car number : 3088
+# 9EA488C5320CC01B9000000000000331 : Initials : IOCC      Car number : 85123
 ```
 
-Désérialisation de tags depuis un fichier :
+Tag deserialization from a file :
 ```bash
-# Contenu de tags.txt :
+# tags.txt content :
 $ cat tags.txt
-2F3E06C007DB1E139000000000000331
-9EA488C030426A179000000000000331
-9EA488C5320CC01B9000000000000331
-$ ./aei-tag-parser -f test.txt
+# Output :
+# 2F3E06C007DB1E139000000000000331
+# 9EA488C030426A179000000000000331
+# 9EA488C5320CC01B9000000000000331
+$ aei-tag-parser -f test.txt
+# Output :
+# 2F3E06C007DB1E139000000000000331 : Initials : QNSL      Car number : 502
+# 9EA488C030426A179000000000000331 : Initials : IOCC      Car number : 3088
+# 9EA488C5320CC01B9000000000000331 : Initials : IOCC      Car number : 85123
 ```
 
-Désérialisation de tags depuis un pipe :
+Tag deserialization from a UNIX pipe :
 ```bash
-# Contenu de tags.txt :
+# tags.txt content :
 $ cat tags.txt
-2F3E06C007DB1E139000000000000331
-9EA488C030426A179000000000000331
-9EA488C5320CC01B9000000000000331
-$ cat tags.txt | ./aei-tag-parser
+# Output :
+# 2F3E06C007DB1E139000000000000331
+# 9EA488C030426A179000000000000331
+# 9EA488C5320CC01B9000000000000331
+$ cat tags.txt | aei-tag-parser
+# Output :
+# 2F3E06C007DB1E139000000000000331 : Initials : QNSL      Car number : 502
+# 9EA488C030426A179000000000000331 : Initials : IOCC      Car number : 3088
+# 9EA488C5320CC01B9000000000000331 : Initials : IOCC      Car number : 85123
 ```
 
 ## Librairie
 
-Le projet est aussi disponible en tant que librairie. Pour voir la documention :
-```
-$ cargo doc --open
-```
+This project can also be used as an external library. Documentation is available here : [https://docs.rs/aei_tag_parser/1.0.0/aei_tag_parser/index.html](https://docs.rs/aei_tag_parser/1.0.0/aei_tag_parser/index.html)
 
-# Build
+### Usage
 
-Pour build le projet, il faut avoir rust d'installé (cf [RustUp](https://rustup.rs/)).
+```rust
+let tag_str : String = String::from("9EA488C030426A179000000000000331");
+let tag : AEITagData = AEITagData::new(&tag_str);
 
-```bash
-$ cargo build --release
+println!("Tag {} content is : \r\n\tInitials: {}\r\n\tCar number: {}", &tag_str, tag.equipment_initial(), tag.car_number());
 ```
 
-L'executable est généré dans ./target/release/aei-tag-parser
+# Install
+
+To install the CLI util, you must have Rust installed (cf [RustUp](https://rustup.rs/)).
+
+Then you can simply do : 
+```bash 
+$ cargo install aei_tag_parser
+```
