@@ -1,25 +1,25 @@
 //! # AEI TAG PARSER
-//! 
+//!
 //! This library provides a way to deserialize RFID AEI tags used in railway industry to identify wagons. It can be used both a CLI util or a library
-//! 
-//! # Usage 
-//! 
+//!
+//! # Usage
+//!
 //! ## CLI
-//! 
+//!
 //! Deserialize one or multiple tags passed as parameters :
-//! ```bash 
+//! ```bash
 //! # One tag :
 //! $ aei-tag-parser 9EA488C030426A179000000000000331
-//! # Output : 
+//! # Output :
 //! # 9EA488C030426A179000000000000331 : Initials : IOCC      Car number : 3088
 //! # Multiple tags :
 //! $ aei-tag-parser 2F3E06C007DB1E139000000000000331 9EA488C030426A179000000000000331 9EA488C5320CC01B9000000000000331
-//! # Output : 
+//! # Output :
 //! # 2F3E06C007DB1E139000000000000331 : Initials : QNSL      Car number : 502
 //! # 9EA488C030426A179000000000000331 : Initials : IOCC      Car number : 3088
 //! # 9EA488C5320CC01B9000000000000331 : Initials : IOCC      Car number : 85123
 //! ```
-//! 
+//!
 //! Tag deserialization from a file :
 //! ```bash
 //! # tags.txt content :
@@ -34,7 +34,7 @@
 //! # 9EA488C030426A179000000000000331 : Initials : IOCC      Car number : 3088
 //! # 9EA488C5320CC01B9000000000000331 : Initials : IOCC      Car number : 85123
 //! ```
-//! 
+//!
 //! Tag deserialization from a UNIX pipe :
 //! ```bash
 //! # tags.txt content :
@@ -49,26 +49,26 @@
 //! # 9EA488C030426A179000000000000331 : Initials : IOCC      Car number : 3088
 //! # 9EA488C5320CC01B9000000000000331 : Initials : IOCC      Car number : 85123
 //! ```
-//! 
+//!
 //! ## Librairie
-//! 
+//!
 //! This project can also be used as an external library. Documentation is available here : [https://docs.rs/aei_tag_parser/1.0.0/aei_tag_parser/index.html](https://docs.rs/aei_tag_parser/1.0.0/aei_tag_parser/index.html)
-//! 
+//!
 //! ### Usage
-//! 
+//!
 //! ```rust
 //! let tag_str : String = String::from("9EA488C030426A179000000000000331");
 //! let tag : AEITagData = AEITagData::new(&tag_str);
-//! 
+//!
 //! println!("Tag {} content is : \r\n\tInitials: {}\r\n\tCar number: {}", &tag_str, tag.equipment_initial(), tag.car_number());
 //! ```
-//! 
+//!
 //! # Install
-//! 
+//!
 //! To install the CLI util, you must have Rust installed (cf [RustUp](https://rustup.rs/)).
-//! 
-//! Then you can simply do : 
-//! ```bash 
+//!
+//! Then you can simply do :
+//! ```bash
 //! $ cargo install aei_tag_parser
 //! ```
 
@@ -114,7 +114,44 @@
 // +--------------------------+---------------+--------------------+---------------+---------------+-----------------------------------------------+
 */
 extern crate hex;
+use hex::FromHexError;
 use serde::{Deserialize, Serialize};
+use std::{
+    error,
+    fmt::{Debug, Display},
+};
+
+#[derive(Debug)]
+pub enum NewTagError {
+    HexParsing(FromHexError),
+}
+
+impl From<FromHexError> for NewTagError {
+    fn from(err: FromHexError) -> Self {
+        NewTagError::HexParsing(err)
+    }
+}
+
+impl Display for NewTagError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            NewTagError::HexParsing(..) => {
+                write!(
+                    f,
+                    "the provided string couldn't be parsed as an hexadecimal number"
+                )
+            }
+        }
+    }
+}
+
+impl error::Error for NewTagError {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        match *self {
+            NewTagError::HexParsing(ref e) => Some(e),
+        }
+    }
+}
 
 #[derive(Copy, Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub enum Side {
@@ -135,7 +172,7 @@ pub struct AEITagData {
 }
 
 impl AEITagData {
-    pub fn new(tag: &str) -> Result<AEITagData, hex::FromHexError> {
+    pub fn new(tag: &str) -> Result<AEITagData, NewTagError> {
         let mut raw = [0u8; 16];
         hex::decode_to_slice(tag, &mut raw)?;
 
@@ -323,6 +360,8 @@ impl AEITagData {
 
 #[cfg(test)]
 mod tests {
+    use std::error::Error;
+
     use super::*;
 
     /// QNSL 502 RIGHT Locomotive(5) 94' 0" 4 axles
@@ -353,34 +392,58 @@ mod tests {
         assert_eq!(AEITagData::parse_equipment_group_code(1), "Railcar cover");
         assert_eq!(AEITagData::parse_equipment_group_code(2), "Reserved");
         assert_eq!(AEITagData::parse_equipment_group_code(3), "Reserved");
-        assert_eq!(AEITagData::parse_equipment_group_code(4), "Train number tag (locomotive variable data)");
+        assert_eq!(
+            AEITagData::parse_equipment_group_code(4),
+            "Train number tag (locomotive variable data)"
+        );
         assert_eq!(AEITagData::parse_equipment_group_code(5), "Locomotive");
-        assert_eq!(AEITagData::parse_equipment_group_code(6), "End-of-train device");
+        assert_eq!(
+            AEITagData::parse_equipment_group_code(6),
+            "End-of-train device"
+        );
         assert_eq!(AEITagData::parse_equipment_group_code(7), "Reserved");
         assert_eq!(AEITagData::parse_equipment_group_code(8), "Generator set");
         assert_eq!(AEITagData::parse_equipment_group_code(9), "Reserved");
-        assert_eq!(AEITagData::parse_equipment_group_code(10), "Intermodal container");
+        assert_eq!(
+            AEITagData::parse_equipment_group_code(10),
+            "Intermodal container"
+        );
         assert_eq!(AEITagData::parse_equipment_group_code(11), "Reserved");
         assert_eq!(AEITagData::parse_equipment_group_code(12), "Marker tags");
         assert_eq!(AEITagData::parse_equipment_group_code(13), "Reserved");
-        assert_eq!(AEITagData::parse_equipment_group_code(14), "Reserved (formerly nonrevenue rail)");
+        assert_eq!(
+            AEITagData::parse_equipment_group_code(14),
+            "Reserved (formerly nonrevenue rail)"
+        );
         assert_eq!(AEITagData::parse_equipment_group_code(15), "Reserved");
         assert_eq!(AEITagData::parse_equipment_group_code(16), "Reserved");
-        assert_eq!(AEITagData::parse_equipment_group_code(17), "Tractor (power)");
+        assert_eq!(
+            AEITagData::parse_equipment_group_code(17),
+            "Tractor (power)"
+        );
         assert_eq!(AEITagData::parse_equipment_group_code(18), "Straight truck");
         assert_eq!(AEITagData::parse_equipment_group_code(19), "Railcar");
         assert_eq!(AEITagData::parse_equipment_group_code(20), "Dolly");
         assert_eq!(AEITagData::parse_equipment_group_code(21), "Trailer");
         assert_eq!(AEITagData::parse_equipment_group_code(22), "Reserved");
         assert_eq!(AEITagData::parse_equipment_group_code(23), "Reserved");
-        assert_eq!(AEITagData::parse_equipment_group_code(24), "Rail-compatible multimodal equipment");
+        assert_eq!(
+            AEITagData::parse_equipment_group_code(24),
+            "Rail-compatible multimodal equipment"
+        );
         assert_eq!(AEITagData::parse_equipment_group_code(25), "Reserved");
         assert_eq!(AEITagData::parse_equipment_group_code(26), "Reserved");
         assert_eq!(AEITagData::parse_equipment_group_code(27), "Chassis");
-        assert_eq!(AEITagData::parse_equipment_group_code(28), "Passive alarm tag");
+        assert_eq!(
+            AEITagData::parse_equipment_group_code(28),
+            "Passive alarm tag"
+        );
         assert_eq!(AEITagData::parse_equipment_group_code(29), "Reserved");
         assert_eq!(AEITagData::parse_equipment_group_code(30), "Reserved");
-        assert_eq!(AEITagData::parse_equipment_group_code(31), "Experimental use/other");        
+        assert_eq!(
+            AEITagData::parse_equipment_group_code(31),
+            "Experimental use/other"
+        );
     }
 
     #[test]
@@ -402,8 +465,14 @@ mod tests {
 
     #[test]
     fn valid_equipment_initial_code() {
-        assert_eq!(AEITagData::new(TAG1).unwrap().equipment_initial_code(), 325659);
-        assert_eq!(AEITagData::new(TAG2).unwrap().equipment_initial_code(), 168483);
+        assert_eq!(
+            AEITagData::new(TAG1).unwrap().equipment_initial_code(),
+            325659
+        );
+        assert_eq!(
+            AEITagData::new(TAG2).unwrap().equipment_initial_code(),
+            168483
+        );
     }
 
     #[test]
@@ -442,8 +511,10 @@ mod tests {
     fn invalid_hex_odd_length() {
         let result = AEITagData::new("00F");
 
+        let err = result.unwrap_err();
+        assert_eq!(err.to_string(), "the provided string couldn't be parsed as an hexadecimal number");
         assert_eq!(
-            result.unwrap_err().to_string(),
+            err.source().unwrap().to_string(),
             hex::FromHexError::OddLength.to_string()
         );
     }
@@ -451,9 +522,11 @@ mod tests {
     #[test]
     fn invalid_hex_invalid_characters() {
         let result = AEITagData::new("9EA488C5320CC01B900000000000033T");
-
+        
+        let err = result.unwrap_err();
+        assert_eq!(err.to_string(), "the provided string couldn't be parsed as an hexadecimal number");        
         assert_eq!(
-            result.unwrap_err().to_string(),
+            err.source().unwrap().to_string(),
             hex::FromHexError::InvalidHexCharacter { c: 'T', index: 31 }.to_string()
         );
     }
@@ -461,9 +534,11 @@ mod tests {
     #[test]
     fn invalid_hex_invalid_length() {
         let result = AEITagData::new("00");
-
+        
+        let err = result.unwrap_err();
+        assert_eq!(err.to_string(), "the provided string couldn't be parsed as an hexadecimal number");        
         assert_eq!(
-            result.unwrap_err().to_string(),
+            err.source().unwrap().to_string(),
             hex::FromHexError::InvalidStringLength.to_string()
         );
     }
