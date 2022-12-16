@@ -165,6 +165,7 @@ pub struct AEITagData {
     equipment_group_code: u8,
     tag_type_code: u8,
     equipment_initial_code: u32,
+    equipment_initial: String,
     car_number: u32,
     side_indicator: Side,
     length_dm: u16,
@@ -189,6 +190,7 @@ impl AEITagData {
             equipment_group_code,
             tag_type_code,
             equipment_initial_code,
+            equipment_initial: AEITagData::deserialize_equipement_initial(equipment_initial_code),
             car_number,
             side_indicator,
             length_dm,
@@ -265,14 +267,13 @@ impl AEITagData {
         self.equipment_initial_code
     }
 
-    /// Equipment initial value
-    pub fn equipment_initial(&self) -> String {
+    fn deserialize_equipement_initial(equipment_initial_code: u32) -> String {
         // The equipment initial code is 19 bits long. Therefore, we can safely assume that the max value is going to be 2^19 - 1 = 524287
         // Given that information, we would handle the risk of overflow when converting the result from u32 to u8
-        let n1 = self.equipment_initial_code / 27u32.pow(3);
-        let n2 = (self.equipment_initial_code - n1 * 27u32.pow(3)) / 27u32.pow(2);
-        let n3 = (self.equipment_initial_code - n1 * 27u32.pow(3) - n2 * 27u32.pow(2)) / 27;
-        let n4 = self.equipment_initial_code - n1 * 27u32.pow(3) - n2 * 27u32.pow(2) - n3 * 27;
+        let n1 = equipment_initial_code / 27u32.pow(3);
+        let n2 = (equipment_initial_code - n1 * 27u32.pow(3)) / 27u32.pow(2);
+        let n3 = (equipment_initial_code - n1 * 27u32.pow(3) - n2 * 27u32.pow(2)) / 27;
+        let n4 = equipment_initial_code - n1 * 27u32.pow(3) - n2 * 27u32.pow(2) - n3 * 27;
 
         // For C1, A = 0, ..., Z = 25
         let c1 = char::try_from(n1 + 65).unwrap();
@@ -282,6 +283,11 @@ impl AEITagData {
         let c4 = char::try_from(if n4 == 0 { 32 } else { n4 + 64 }).unwrap();
 
         vec![c1, c2, c3, c4].iter().collect()
+    }
+
+    /// Equipment initial value
+    pub fn equipment_initial(&self) -> String {
+        AEITagData::deserialize_equipement_initial(self.equipment_initial_code)
     }
 
     /// Parse the car number from the raw tag data
@@ -512,7 +518,10 @@ mod tests {
         let result = AEITagData::new("00F");
 
         let err = result.unwrap_err();
-        assert_eq!(err.to_string(), "the provided string couldn't be parsed as an hexadecimal number");
+        assert_eq!(
+            err.to_string(),
+            "the provided string couldn't be parsed as an hexadecimal number"
+        );
         assert_eq!(
             err.source().unwrap().to_string(),
             hex::FromHexError::OddLength.to_string()
@@ -522,9 +531,12 @@ mod tests {
     #[test]
     fn invalid_hex_invalid_characters() {
         let result = AEITagData::new("9EA488C5320CC01B900000000000033T");
-        
+
         let err = result.unwrap_err();
-        assert_eq!(err.to_string(), "the provided string couldn't be parsed as an hexadecimal number");        
+        assert_eq!(
+            err.to_string(),
+            "the provided string couldn't be parsed as an hexadecimal number"
+        );
         assert_eq!(
             err.source().unwrap().to_string(),
             hex::FromHexError::InvalidHexCharacter { c: 'T', index: 31 }.to_string()
@@ -534,9 +546,12 @@ mod tests {
     #[test]
     fn invalid_hex_invalid_length() {
         let result = AEITagData::new("00");
-        
+
         let err = result.unwrap_err();
-        assert_eq!(err.to_string(), "the provided string couldn't be parsed as an hexadecimal number");        
+        assert_eq!(
+            err.to_string(),
+            "the provided string couldn't be parsed as an hexadecimal number"
+        );
         assert_eq!(
             err.source().unwrap().to_string(),
             hex::FromHexError::InvalidStringLength.to_string()
