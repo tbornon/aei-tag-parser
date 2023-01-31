@@ -159,7 +159,7 @@ pub enum Side {
     RIGHT,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AEITagData {
     raw: [u8; 16],
     equipment_group_code: u8,
