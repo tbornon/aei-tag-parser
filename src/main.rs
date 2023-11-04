@@ -17,15 +17,18 @@ fn main() {
     // If there is a file specified in the argument, add the contained tags in the list of tags to parse
     if let Some(path) = matches.get_one::<PathBuf>("file") {
         read_tags_from_file(path, &mut tags);
+    } else if matches.contains_id("stdin") {
+        // Read tags from stdin
+        read_tags_from_stdin(&mut tags);
     }
 
     // Extract the tags passed as argument when calling the program
     read_tags_from_cli(&matches, &mut tags);
-
-    // Read tags from stdin
-    read_tags_from_stdin(&mut tags);
-
-    print_tags(&tags);
+    if matches.contains_id("csv") {
+        print_tags(&tags, true);
+    } else {
+        print_tags(&tags, false);
+    }
 }
 
 #[cfg(not(tarpaulin_include))]
@@ -79,14 +82,20 @@ fn read_tags_from_stdin(out: &mut Vec<String>) {
 }
 
 #[cfg(not(tarpaulin_include))]
-fn print_tags(tags: &Vec<String>) {
+fn print_tags(tags: &Vec<String>, csv: bool) {
     for val in tags {
         let tag = match AEITagData::new(&val) {
-            Ok(val) => val.to_short_string(),
+            Ok(val) => {
+                if csv {
+                    val.to_csv()
+                } else {
+                    val.to_short_string()
+                }
+            }
             Err(e) => e.to_string(),
         };
 
-        println!("{} : {}", val, tag);
+        println!("{}", tag);
     }
 }
 
@@ -103,6 +112,8 @@ fn cli() -> clap::ArgMatches {
                 .value_parser(value_parser!(String))
                 .multiple_values(true),
         )
+        .arg(arg!(-s --stdin "Get the data from stdin"))
+        .arg(arg!(--csv "Print the data in CSV format"))
         .arg_required_else_help(true)
         .get_matches()
 }

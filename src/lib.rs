@@ -159,6 +159,15 @@ pub enum Side {
     RIGHT,
 }
 
+impl Display for Side {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            Side::LEFT => write!(f,"Left"),
+            Side::RIGHT => write!(f,"Right"),
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AEITagData {
     raw: [u8; 16],
@@ -357,10 +366,35 @@ impl AEITagData {
     /// Returns a short string which describes the datas
     pub fn to_short_string(&self) -> String {
         format!(
-            "Initials : {}\tCar number : {}",
+            "Raw : {}\tInitials : {}\tCar number : {}\tEquipment type : {}({})\tSide : {}",
+            hex::encode_upper(&self.raw),
             self.equipment_initial(),
-            self.car_number
+            self.car_number,
+            self.equipment_group(),
+            self.equipment_group_code,
+            self.side_indicator
         )
+    }
+
+    // Returns a string in CSV format which describes the tag
+    pub fn to_csv(&self) -> String {
+        format!(
+            "{};{};{};{};{};{}",
+            hex::encode_upper(&self.raw),
+            self.equipment_initial(),
+            self.car_number,
+            self.equipment_group(),
+            self.equipment_group_code,
+            self.side_indicator
+        )
+    }
+
+    /// Check if 2 tags belong to the same wagon. It compare the equipment initials code,
+    /// the equipment group code and the car number however, the side is ignored
+    pub fn is_same_wagon(&self, tag: AEITagData) -> bool {
+        self.car_number == tag.car_number
+            && self.equipment_group_code == tag.equipment_group_code
+            && self.equipment_initial_code == tag.equipment_initial_code
     }
 }
 
